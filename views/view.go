@@ -32,14 +32,39 @@ func DibujarEspacios(imd *imdraw.IMDraw, e *models.Estacionamiento, win *pixelgl
 		imd.Push(pixel.V(x+AnchoAuto, y+AltoEspacio))
 		imd.Rectangle(0)
 
-		// Dibujar números en los espacios de estacionamiento
+		//Dibuja
 
-		txt := text.New(pixel.V(x+AnchoAuto/2, y+AltoEspacio/2), atlas)
+		txt := text.New(pixel.V(x+AnchoAuto/2, y+AltoEspacio/.5), atlas) // Ajusta el valor 1.5 para cambiar la posición vertical del número
 		txt.Color = pixel.RGB(255, 255, 255)
 		txt.WriteString(strconv.Itoa(i + 1))
-		txt.Draw(win, pixel.IM.Scaled(txt.Orig, 2))
+		txt.Draw(win, pixel.IM.Scaled(txt.Orig, 1))
 
 	}
+}
+
+func DibujarEntrada(imd *imdraw.IMDraw, e *models.Estacionamiento, win *pixelgl.Window) {
+	imd.Color = pixel.RGB(0, 1, 0) // Color verde para la entrada
+	entradaX := e.EntradaPosX
+	entradaY := e.EntradaPosY
+	anchoEntrada := AnchoAuto
+	altoEntrada := AltoAuto
+
+	imd.Push(pixel.V(entradaX, entradaY))
+	imd.Push(pixel.V(entradaX+anchoEntrada, entradaY+altoEntrada))
+	imd.Rectangle(0)
+}
+
+// Función para dibujar la salida
+func DibujarSalida(imd *imdraw.IMDraw, e *models.Estacionamiento, win *pixelgl.Window) {
+	imd.Color = pixel.RGB(1, 0, 0) // Color rojo para la salida
+	salidaX := e.SalidaPosX
+	salidaY := e.SalidaPosY
+	anchoSalida := AnchoAuto
+	altoSalida := AltoAuto
+
+	imd.Push(pixel.V(salidaX, salidaY))
+	imd.Push(pixel.V(salidaX+anchoSalida, salidaY+altoSalida))
+	imd.Rectangle(0)
 }
 
 func Run(win *pixelgl.Window, e *models.Estacionamiento) {
@@ -66,10 +91,12 @@ func Run(win *pixelgl.Window, e *models.Estacionamiento) {
 	espacioEntreAutos := AnchoAuto + DistanciaEntreAutos
 
 	for !win.Closed() {
-		win.Clear(pixel.RGB(1, 1, 1))
+		win.Clear(pixel.RGB(1, 0, 1))
 
 		im := imdraw.New(nil)
 		DibujarEspacios(im, e, win, atlas)
+		DibujarEntrada(im, e, win) // Llama a la función para dibujar la entrada
+		DibujarSalida(im, e, win)  // Llama a la función para dibujar la salida
 
 		e.Mu.Lock()
 		for i, auto := range e.Ocupados {
@@ -79,7 +106,7 @@ func Run(win *pixelgl.Window, e *models.Estacionamiento) {
 				// Calcular la posición X teniendo en cuenta el espacio entre autos
 				auto.PosX = float64(i) * 30
 
-				im.Color = pixel.RGB(1, 0, 0)
+				im.Color = pixel.RGB(0, 0, 1)
 				im.Push(pixel.V(auto.PosX, auto.PosY))
 				im.Push(pixel.V(auto.PosX+AnchoAuto, auto.PosY+AltoAuto))
 				im.Rectangle(0)

@@ -19,8 +19,7 @@ func main() {
 			panic(err)
 		}
 
-		e := models.NuevoEstacionamiento(20, 100.0, 200.0, 700.0, 200.0)
-
+		e := models.NuevoEstacionamiento(20)
 		views.Run(win, e)
 	})
 }
