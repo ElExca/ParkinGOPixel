@@ -91,8 +91,7 @@ func Run(win *pixelgl.Window, e *models.Estacionamiento) {
 					im.Push(pixel.V(auto.PosX+AnchoAuto, auto.PosY+AltoAuto))
 					im.Rectangle(0)
 				} else if auto.State == models.StateExiting {
-
-					auto.PosX += Velocidad * auto.Dir
+					auto.PosX -= Velocidad * auto.Dir // Cambiar la dirección a negativa (-1)
 					auto.PosY = AltoAuto + AltoEspacio*2
 					im.Color = pixel.RGB(0, 0, 1)
 					im.Push(pixel.V(auto.PosX, auto.PosY))
@@ -100,7 +99,6 @@ func Run(win *pixelgl.Window, e *models.Estacionamiento) {
 					im.Rectangle(0)
 
 					if auto.PosX <= -AnchoAuto-DistanciaEntreAutos {
-
 						e.Ocupados[i] = nil
 					}
 				}
