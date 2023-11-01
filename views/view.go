@@ -34,8 +34,7 @@ func DibujarEspacios(imd *imdraw.IMDraw, e *models.Estacionamiento, win *pixelgl
 
 		//Dibuja
 
-		txt := text.New(pixel.V(x+AnchoAuto/2, y+AltoEspacio/.5), atlas) // Ajusta el valor 1.5 para cambiar la posición vertical del número
-		txt.Color = pixel.RGB(255, 255, 255)
+		txt := text.New(pixel.V(x+AnchoAuto/2, y+AltoEspacio/.5), atlas)
 		txt.WriteString(strconv.Itoa(i + 1))
 		txt.Draw(win, pixel.IM.Scaled(txt.Orig, 1))
 
@@ -48,21 +47,16 @@ func Run(win *pixelgl.Window, e *models.Estacionamiento) {
 
 	go func() {
 		for {
-			auto := &models.Auto{PosX: -AnchoAuto - DistanciaEntreAutos, PosY: AltoAuto + AltoEspacio, Dir: 1}
+			auto := &models.Auto{PosX: -AnchoAuto - DistanciaEntreAutos, PosY: AltoAuto + AltoEspacio, Dir: 1, State: models.StateEntering}
 			pos := e.Entrar(auto)
 
 			if pos != -1 {
 				go func(p int) {
-					// Dormir un tiempo antes de que el auto salga
 					time.Sleep(time.Duration(rand.Intn(15)+5) * time.Second)
-
-					// Cambiar la dirección del auto para que salga por el mismo lado
-					auto.Dir = -1
-					e.Salir(p)
+					auto.State = models.StateExiting
 				}(pos)
 			}
 
-			// tiempo antes crear el siguiente auto
 			time.Sleep(time.Millisecond * 1500)
 		}
 	}()
@@ -78,24 +72,37 @@ func Run(win *pixelgl.Window, e *models.Estacionamiento) {
 		e.Mu.Lock()
 		for i, auto := range e.Ocupados {
 			if auto != nil {
-				// Si el auto ha llegado a la posición de estacionamiento
-				if auto.PosX >= espacioEntreAutos*float64(i) {
-					// Dibujar el auto en su lugar de estacionamiento
+				if auto.State == models.StateEntering {
+					auto.PosX += Velocidad * auto.Dir
+					auto.PosY = AltoAuto + AltoEspacio*2
+					im.Color = pixel.RGB(0, 0, 1)
+					im.Push(pixel.V(auto.PosX, auto.PosY))
+					im.Push(pixel.V(auto.PosX+AnchoAuto, auto.PosY+AltoAuto))
+					im.Rectangle(0)
+
+					if auto.PosX >= espacioEntreAutos*float64(i) {
+						auto.State = models.StateParked
+					}
+				} else if auto.State == models.StateParked {
 					auto.PosX = espacioEntreAutos * float64(i)
 					auto.PosY = AltoAuto + AltoEspacio
+					im.Color = pixel.RGB(0, 0, 1)
+					im.Push(pixel.V(auto.PosX, auto.PosY))
+					im.Push(pixel.V(auto.PosX+AnchoAuto, auto.PosY+AltoAuto))
+					im.Rectangle(0)
+				} else if auto.State == models.StateExiting {
 
-					im.Color = pixel.RGB(0, 0, 1)
-					im.Push(pixel.V(auto.PosX, auto.PosY))
-					im.Push(pixel.V(auto.PosX+AnchoAuto, auto.PosY+AltoAuto))
-					im.Rectangle(0)
-				} else {
-					// Dibujar el auto arriba antes de estacionarse
 					auto.PosX += Velocidad * auto.Dir
-					auto.PosY = AltoAuto + AltoEspacio*2 // Cambiar la altura
+					auto.PosY = AltoAuto + AltoEspacio*2
 					im.Color = pixel.RGB(0, 0, 1)
 					im.Push(pixel.V(auto.PosX, auto.PosY))
 					im.Push(pixel.V(auto.PosX+AnchoAuto, auto.PosY+AltoAuto))
 					im.Rectangle(0)
+
+					if auto.PosX <= -AnchoAuto-DistanciaEntreAutos {
+
+						e.Ocupados[i] = nil
+					}
 				}
 			}
 		}
