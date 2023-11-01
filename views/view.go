@@ -41,7 +41,24 @@ func DibujarEspacios(imd *imdraw.IMDraw, e *models.Estacionamiento, win *pixelgl
 
 	}
 }
-
+func ControlFlujoVehiculos(e *models.Estacionamiento, entradaCh, salidaCh chan *models.Auto) {
+	for {
+		select {
+		case auto := <-entradaCh:
+			// Un vehículo intenta entrar
+			pos := e.Entrar(auto)
+			if pos != -1 {
+				// El vehículo ocupó un lugar en el estacionamiento
+				go func(p int) {
+					time.Sleep(time.Duration(rand.Intn(15)+5) * time.Second)
+					e.Salir(p)
+					// Después de salir, envía el vehículo al canal de salida
+					salidaCh <- auto
+				}(pos)
+			}
+		}
+	}
+}
 func DibujarEntrada(imd *imdraw.IMDraw, e *models.Estacionamiento, win *pixelgl.Window) {
 	imd.Color = pixel.RGB(0, 1, 0) // Color verde para la entrada
 	entradaX := e.EntradaPosX
