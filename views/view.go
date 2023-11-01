@@ -41,48 +41,6 @@ func DibujarEspacios(imd *imdraw.IMDraw, e *models.Estacionamiento, win *pixelgl
 
 	}
 }
-func ControlFlujoVehiculos(e *models.Estacionamiento, entradaCh, salidaCh chan *models.Auto) {
-	for {
-		select {
-		case auto := <-entradaCh:
-			// Un vehículo intenta entrar
-			pos := e.Entrar(auto)
-			if pos != -1 {
-				// El vehículo ocupó un lugar en el estacionamiento
-				go func(p int) {
-					time.Sleep(time.Duration(rand.Intn(15)+5) * time.Second)
-					e.Salir(p)
-					// Después de salir, envía el vehículo al canal de salida
-					salidaCh <- auto
-				}(pos)
-			}
-		}
-	}
-}
-func DibujarEntrada(imd *imdraw.IMDraw, e *models.Estacionamiento, win *pixelgl.Window) {
-	imd.Color = pixel.RGB(0, 1, 0) // Color verde para la entrada
-	entradaX := e.EntradaPosX
-	entradaY := e.EntradaPosY
-	anchoEntrada := AnchoAuto
-	altoEntrada := AltoAuto
-
-	imd.Push(pixel.V(entradaX, entradaY))
-	imd.Push(pixel.V(entradaX+anchoEntrada, entradaY+altoEntrada))
-	imd.Rectangle(0)
-}
-
-// Función para dibujar la salida
-func DibujarSalida(imd *imdraw.IMDraw, e *models.Estacionamiento, win *pixelgl.Window) {
-	imd.Color = pixel.RGB(1, 0, 0) // Color rojo para la salida
-	salidaX := e.SalidaPosX
-	salidaY := e.SalidaPosY
-	anchoSalida := AnchoAuto
-	altoSalida := AltoAuto
-
-	imd.Push(pixel.V(salidaX, salidaY))
-	imd.Push(pixel.V(salidaX+anchoSalida, salidaY+altoSalida))
-	imd.Rectangle(0)
-}
 
 func Run(win *pixelgl.Window, e *models.Estacionamiento) {
 	rand.Seed(time.Now().UnixNano())
@@ -95,7 +53,11 @@ func Run(win *pixelgl.Window, e *models.Estacionamiento) {
 
 			if pos != -1 {
 				go func(p int) {
+					// Dormir un tiempo antes de que el auto salga
 					time.Sleep(time.Duration(rand.Intn(15)+5) * time.Second)
+
+					// Cambiar la dirección del auto para que salga por el mismo lado
+					auto.Dir = -1
 					e.Salir(p)
 				}(pos)
 			}
@@ -112,24 +74,28 @@ func Run(win *pixelgl.Window, e *models.Estacionamiento) {
 
 		im := imdraw.New(nil)
 		DibujarEspacios(im, e, win, atlas)
-		DibujarEntrada(im, e, win) // Llama a la función para dibujar la entrada
-		DibujarSalida(im, e, win)  // Llama a la función para dibujar la salida
 
 		e.Mu.Lock()
 		for i, auto := range e.Ocupados {
 			if auto != nil {
-				auto.PosY = AltoAuto + AltoEspacio
+				// Si el auto ha llegado a la posición de estacionamiento
+				if auto.PosX >= espacioEntreAutos*float64(i) {
+					// Dibujar el auto en su lugar de estacionamiento
+					auto.PosX = espacioEntreAutos * float64(i)
+					auto.PosY = AltoAuto + AltoEspacio
 
-				// Calcular la posición X teniendo en cuenta el espacio entre autos
-				auto.PosX = float64(i) * 30
-
-				im.Color = pixel.RGB(0, 0, 1)
-				im.Push(pixel.V(auto.PosX, auto.PosY))
-				im.Push(pixel.V(auto.PosX+AnchoAuto, auto.PosY+AltoAuto))
-				im.Rectangle(0)
-
-				if auto.PosX < espacioEntreAutos*float64(i) || auto.Dir == -1 {
+					im.Color = pixel.RGB(0, 0, 1)
+					im.Push(pixel.V(auto.PosX, auto.PosY))
+					im.Push(pixel.V(auto.PosX+AnchoAuto, auto.PosY+AltoAuto))
+					im.Rectangle(0)
+				} else {
+					// Dibujar el auto arriba antes de estacionarse
 					auto.PosX += Velocidad * auto.Dir
+					auto.PosY = AltoAuto + AltoEspacio*2 // Cambiar la altura
+					im.Color = pixel.RGB(0, 0, 1)
+					im.Push(pixel.V(auto.PosX, auto.PosY))
+					im.Push(pixel.V(auto.PosX+AnchoAuto, auto.PosY+AltoAuto))
+					im.Rectangle(0)
 				}
 			}
 		}
